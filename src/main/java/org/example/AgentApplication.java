@@ -912,9 +912,17 @@ public class AgentApplication {
                                                      * IDLE EVENTS
                                                      * =================================================
                                                      *
-                                                     * Process the attendance event first.
-                                                     * The attendance manager is the source of truth.
+                                                     * AttendanceEventManager is the source of truth.
+                                                     *
+                                                     * IMPORTANT:
+                                                     * Do not generate duplicate IDLE_STARTED events
+                                                     * when the workspace has already moved the state
+                                                     * to IDLE after Break or Lunch.
                                                      */
+
+                                                    AttendanceState currentAttendanceState =
+                                                            eventManager.getCurrentState();
+
 
                                                     if (
                                                             idleEvent != null
@@ -923,90 +931,209 @@ public class AgentApplication {
                                                                     && !lunchRunning
                                                     ) {
 
-                                                        AttendanceEvent
-                                                                idleAttendanceEvent =
-                                                                idleEvent
-                                                                        == AttendanceEventType.IDLE_STARTED
-                                                                        ? eventManager
-                                                                        .startIdle()
-                                                                        : eventManager
-                                                                        .endIdle();
-
-
-                                                        AttendanceSendResult
-                                                                idleEventResult =
-                                                                eventSender
-                                                                        .sendEvent(
-                                                                                idleAttendanceEvent
-                                                                        );
-
+                                                        /*
+                                                         * -------------------------------------------------
+                                                         * IDLE START
+                                                         * -------------------------------------------------
+                                                         *
+                                                         * Only create IDLE_STARTED when the current
+                                                         * attendance state is NOT already IDLE.
+                                                         */
 
                                                         if (
-                                                                idleEventResult
-                                                                        == AttendanceSendResult.SUCCESS
+                                                                idleEvent
+                                                                        == AttendanceEventType.IDLE_STARTED
+                                                                        && currentAttendanceState
+                                                                        != AttendanceState.IDLE
                                                         ) {
 
-                                                            System.out.println(
-                                                                    idleEvent
-                                                                            + " event sent successfully."
-                                                            );
+                                                            AttendanceEvent
+                                                                    idleAttendanceEvent =
+                                                                    eventManager.startIdle();
 
-                                                        } else if (
-                                                                idleEventResult
-                                                                        == AttendanceSendResult.REJECTED
-                                                        ) {
 
-                                                            System.out.println(
-                                                                    idleEvent
-                                                                            + " event was rejected by server. "
-                                                                            + "Event will NOT be queued."
-                                                            );
+                                                            AttendanceSendResult
+                                                                    idleEventResult =
+                                                                    eventSender.sendEvent(
+                                                                            idleAttendanceEvent
+                                                                    );
 
-                                                        } else {
 
-                                                            System.out.println(
-                                                                    idleEvent
-                                                                            + " event failed to send. "
-                                                                            + "Event will be queued for retry."
-                                                            );
+                                                            if (
+                                                                    idleEventResult
+                                                                            == AttendanceSendResult.SUCCESS
+                                                            ) {
 
-                                                            attendanceEventQueue.add(
-                                                                    idleAttendanceEvent
+                                                                System.out.println(
+                                                                        "IDLE_STARTED event sent successfully."
+                                                                );
+
+                                                            } else if (
+                                                                    idleEventResult
+                                                                            == AttendanceSendResult.REJECTED
+                                                            ) {
+
+                                                                System.out.println(
+                                                                        "IDLE_STARTED event was rejected by server. "
+                                                                                + "Event will NOT be queued."
+                                                                );
+
+                                                            } else {
+
+                                                                System.out.println(
+                                                                        "IDLE_STARTED event failed to send. "
+                                                                                + "Event will be queued for retry."
+                                                                );
+
+
+                                                                attendanceEventQueue.add(
+                                                                        idleAttendanceEvent
+                                                                );
+                                                            }
+
+
+                                                            AttendanceState
+                                                                    updatedAttendanceState =
+                                                                    eventManager.getCurrentState();
+
+
+                                                            String updatedState =
+                                                                    updatedAttendanceState == null
+                                                                            ? "UNKNOWN"
+                                                                            : updatedAttendanceState.name();
+
+
+                                                            logActivityStateChange(
+                                                                    updatedState
                                                             );
                                                         }
 
+
                                                         /*
-                                                         * Read the state AFTER startIdle()/endIdle().
+                                                         * -------------------------------------------------
+                                                         * IDLE END
+                                                         * -------------------------------------------------
+                                                         *
+                                                         * Only create IDLE_ENDED when the current
+                                                         * attendance state is actually IDLE.
                                                          */
-                                                        AttendanceState
-                                                                updatedAttendanceState =
-                                                                eventManager
-                                                                        .getCurrentState();
 
-                                                        String updatedState =
-                                                                updatedAttendanceState == null
-                                                                        ? "UNKNOWN"
-                                                                        : updatedAttendanceState.name();
+                                                        else if (
+                                                                idleEvent
+                                                                        == AttendanceEventType.IDLE_ENDED
+                                                                        && currentAttendanceState
+                                                                        == AttendanceState.IDLE
+                                                        ) {
 
-                                                        logActivityStateChange(
-                                                                updatedState
-                                                        );
+                                                            AttendanceEvent
+                                                                    idleAttendanceEvent =
+                                                                    eventManager.endIdle();
+
+
+                                                            AttendanceSendResult
+                                                                    idleEventResult =
+                                                                    eventSender.sendEvent(
+                                                                            idleAttendanceEvent
+                                                                    );
+
+
+                                                            if (
+                                                                    idleEventResult
+                                                                            == AttendanceSendResult.SUCCESS
+                                                            ) {
+
+                                                                System.out.println(
+                                                                        "IDLE_ENDED event sent successfully."
+                                                                );
+
+                                                            } else if (
+                                                                    idleEventResult
+                                                                            == AttendanceSendResult.REJECTED
+                                                            ) {
+
+                                                                System.out.println(
+                                                                        "IDLE_ENDED event was rejected by server. "
+                                                                                + "Event will NOT be queued."
+                                                                );
+
+                                                            } else {
+
+                                                                System.out.println(
+                                                                        "IDLE_ENDED event failed to send. "
+                                                                                + "Event will be queued for retry."
+                                                                );
+
+
+                                                                attendanceEventQueue.add(
+                                                                        idleAttendanceEvent
+                                                                );
+                                                            }
+
+
+                                                            AttendanceState
+                                                                    updatedAttendanceState =
+                                                                    eventManager.getCurrentState();
+
+
+                                                            String updatedState =
+                                                                    updatedAttendanceState == null
+                                                                            ? "UNKNOWN"
+                                                                            : updatedAttendanceState.name();
+
+
+                                                            logActivityStateChange(
+                                                                    updatedState
+                                                            );
+                                                        }
+
+
+                                                        /*
+                                                         * -------------------------------------------------
+                                                         * DUPLICATE / INVALID IDLE EVENT
+                                                         * -------------------------------------------------
+                                                         *
+                                                         * The event detector may report an event that
+                                                         * is already reflected in AttendanceEventManager.
+                                                         *
+                                                         * Do not create another attendance event.
+                                                         */
+
+                                                        else {
+
+                                                            AttendanceState
+                                                                    state =
+                                                                    eventManager.getCurrentState();
+
+
+                                                            String currentState =
+                                                                    state == null
+                                                                            ? "UNKNOWN"
+                                                                            : state.name();
+
+
+                                                            logActivityStateChange(
+                                                                    currentState
+                                                            );
+                                                        }
 
                                                     } else {
 
                                                         /*
                                                          * No automatic IDLE transition occurred.
+                                                         *
                                                          * Still display the current real attendance state.
                                                          */
+
                                                         AttendanceState
-                                                                currentAttendanceState =
-                                                                eventManager
-                                                                        .getCurrentState();
+                                                                state =
+                                                                eventManager.getCurrentState();
+
 
                                                         String currentState =
-                                                                currentAttendanceState == null
+                                                                state == null
                                                                         ? "UNKNOWN"
-                                                                        : currentAttendanceState.name();
+                                                                        : state.name();
+
 
                                                         logActivityStateChange(
                                                                 currentState
