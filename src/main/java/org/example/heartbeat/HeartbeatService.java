@@ -36,14 +36,13 @@ public class HeartbeatService {
                             HttpResponse.BodyHandlers.ofString()
                     );
 
-            System.out.println("Heartbeat Response:");
-            System.out.println("HTTP Status: " + response.statusCode());
-            System.out.println("Response: " + response.body());
+            // Silent success for heartbeat.
 
         } catch (Exception e) {
 
-            System.out.println("Heartbeat failed: "
-                    + e.getMessage());
+            // Too noisy to print every 10 seconds, but we can print a single line
+            // or just suppress it entirely. Let's make it a WARN if we must print.
+            System.out.println("WARN  Heartbeat failed: " + e.getMessage());
         }
     }
 

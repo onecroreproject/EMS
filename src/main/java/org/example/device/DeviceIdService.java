@@ -4,13 +4,25 @@ import java.net.NetworkInterface;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Enumeration;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 public class DeviceIdService {
 
     public String generateDeviceId() {
 
         try {
+            Path deviceIdFile = Path.of("C:\\ProgramData\\EmployeeAgent\\device-id.txt");
+            
+            // 1. Check if we already have a persisted device ID
+            if (Files.exists(deviceIdFile)) {
+                String savedId = Files.readString(deviceIdFile, StandardCharsets.UTF_8).trim();
+                if (!savedId.isEmpty()) {
+                    return savedId;
+                }
+            }
 
+            // 2. Generate a new one if it doesn't exist
             String macAddress = getMacAddress();
 
             if (macAddress == null) {
@@ -23,7 +35,13 @@ public class DeviceIdService {
                     sha256(macAddress);
 
             // Use first 12 characters
-            return "DEV-" + hash.substring(0, 12).toUpperCase();
+            String newDeviceId = "DEV-" + hash.substring(0, 12).toUpperCase();
+            
+            // 3. Persist it so it never changes even if network adapters change
+            Files.createDirectories(deviceIdFile.getParent());
+            Files.writeString(deviceIdFile, newDeviceId, StandardCharsets.UTF_8);
+            
+            return newDeviceId;
 
         } catch (Exception e) {
 

@@ -1,7 +1,11 @@
+
+
 package org.example.ui;
 
 import org.example.commucnication.AgentLoginService;
 import org.example.config.AgentConfig;
+import org.example.security.WindowsCredentialManager;
+import org.example.security.OfflineAuthorizationManager;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -18,6 +22,8 @@ public class LoginWindow extends JFrame {
 
     private JTextField usernameField;
     private JPasswordField passwordField;
+    private final String deviceId;
+    private final boolean popupMode;
     private JButton loginButton;
     private JLabel statusLabel;
     private EyeToggleLabel passwordToggle;
@@ -80,13 +86,30 @@ public class LoginWindow extends JFrame {
     // Constructors
     // =========================================================
 
+
+
     public LoginWindow() {
-        this(result -> {});
+        this("", result -> {}, false);
     }
 
-    public LoginWindow(Consumer<AgentLoginService.LoginResult> onLoginSuccess) {
+    public LoginWindow(
+            String deviceId,
+            Consumer<AgentLoginService.LoginResult> onLoginSuccess
+    ) {
+        this(deviceId, onLoginSuccess, false);
+    }
+
+    public LoginWindow(
+            String deviceId,
+            Consumer<AgentLoginService.LoginResult> onLoginSuccess,
+            boolean popupMode
+    ) {
+
+        this.deviceId = deviceId;
         this.onLoginSuccess = onLoginSuccess;
-        //this.loginService = new AgentLoginService("http://localhost:8082");
+        this.popupMode = popupMode;
+
+        // this.loginService = new AgentLoginService("http://localhost:8082");
 
         AgentConfig config = new AgentConfig();
         this.loginService = new AgentLoginService(config.getServerUrl());
@@ -95,24 +118,59 @@ public class LoginWindow extends JFrame {
         setSize(980, 640);
         setLocationRelativeTo(null);
         setResizable(false);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        // Normal LoginWindow closes the application.
+        // Popup LoginWindow only closes the popup.
+        if (popupMode) {
+            setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        } else {
+            setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        }
+
         setUndecorated(true);
 
         // Windows 11 style rounded window shape
-        setShape(new RoundRectangle2D.Double(0, 0, 980, 640, 16, 16));
+        setShape(
+                new RoundRectangle2D.Double(
+                        0,
+                        0,
+                        980,
+                        640,
+                        16,
+                        16
+                )
+        );
 
         // Root container with smooth rounded outer border
         JPanel root = new JPanel(new BorderLayout()) {
+
             @Override
             protected void paintComponent(Graphics g) {
+
                 super.paintComponent(g);
+
                 Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                g2.setRenderingHint(
+                        RenderingHints.KEY_ANTIALIASING,
+                        RenderingHints.VALUE_ANTIALIAS_ON
+                );
+
                 g2.setColor(BORDER_LIGHT);
-                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 16, 16);
+
+                g2.drawRoundRect(
+                        0,
+                        0,
+                        getWidth() - 1,
+                        getHeight() - 1,
+                        16,
+                        16
+                );
+
                 g2.dispose();
             }
         };
+
         root.setBackground(BG_WINDOW);
 
         // Custom Title Bar
@@ -122,6 +180,11 @@ public class LoginWindow extends JFrame {
         root.add(createMainContent(), BorderLayout.CENTER);
 
         setContentPane(root);
+
+        // Load previously remembered credentials.
+        // This only pre-fills the login form;
+        // it does NOT sign in automatically.
+        loadRememberedCredentials();
 
         // Enter key submits login
         getRootPane().setDefaultButton(loginButton);
@@ -179,8 +242,13 @@ public class LoginWindow extends JFrame {
 
         minimize.addActionListener(e -> setState(JFrame.ICONIFIED));
 
-        close.addActionListener(e -> System.exit(0));
-
+        close.addActionListener(e -> {
+            if (popupMode) {
+                dispose();
+            } else {
+                System.exit(0);
+            }
+        });
         controls.add(minimize);
 
         controls.add(close);
@@ -611,7 +679,7 @@ public class LoginWindow extends JFrame {
         emsFooter.setForeground(TEXT_LIGHT);
         footer.add(emsFooter, BorderLayout.CENTER);
 
-        JLabel version = new JLabel("v1.0.0");
+        JLabel version = new JLabel("v" + org.example.AgentVersion.VERSION);
         version.setFont(new Font(FONT_FAMILY, Font.PLAIN, 10));
         version.setForeground(TEXT_LIGHT);
         footer.add(version, BorderLayout.EAST);
@@ -1045,43 +1113,435 @@ public class LoginWindow extends JFrame {
     }
 
     // =========================================================
-    // Login Execution Logic (Preserved Concept)
+    // Remember Me
     // =========================================================
 
+    // =========================================================
+    // Remember Me
+    // =========================================================
+
+    /**
+     * Loads Remember Me credentials from Windows Credential Manager.
+     *
+     * Important:
+     * - Only pre-fills the login form.
+     * - Does NOT automatically sign in.
+     * - Employee must still click Sign In.
+     */
+    private void loadRememberedCredentials() {
+
+        try {
+
+            System.out.println(
+                    "Checking Windows Credential Manager for "
+                            + "Remember Me credentials..."
+            );
+
+            String[] savedCredentials =
+                    WindowsCredentialManager.getSavedCredentials();
+
+            if (savedCredentials != null
+                    && savedCredentials.length >= 2
+                    && savedCredentials[0] != null
+                    && !savedCredentials[0].isBlank()
+                    && savedCredentials[1] != null
+                    && !savedCredentials[1].isEmpty()) {
+
+                String savedUsername =
+                        savedCredentials[0];
+
+                String savedPassword =
+                        savedCredentials[1];
+
+                usernameField.setText(savedUsername);
+                passwordField.setText(savedPassword);
+                rememberMeCheckBox.setSelected(true);
+
+                System.out.println(
+                        "Remembered employee credentials loaded."
+                );
+
+                System.out.println(
+                        "Remembered username loaded: "
+                                + savedUsername
+                );
+
+            } else {
+
+                rememberMeCheckBox.setSelected(false);
+
+                System.out.println(
+                        "No Remember Me credentials found."
+                );
+            }
+
+        } catch (Exception e) {
+
+            rememberMeCheckBox.setSelected(false);
+
+            System.err.println(
+                    "Unable to load Remember Me credentials."
+            );
+
+            System.err.println(
+                    "Reason: " + e.getMessage()
+            );
+
+            e.printStackTrace();
+        }
+    }
+
+
+
+// =========================================================
+// Login Execution Logic
+// =========================================================
+
     private void handleLogin() {
+
         String username = usernameField.getText().trim();
         String password = new String(passwordField.getPassword());
 
+        // =========================================================
+        // Validate Input
+        // =========================================================
+
         if (username.isEmpty() || password.isEmpty()) {
-            updateStatus("Please enter credentials", ERROR_RED, ERROR_RED, ERROR_BG, ERROR_BORDER);
+
+            updateStatus(
+                    "Please enter credentials",
+                    ERROR_RED,
+                    ERROR_RED,
+                    ERROR_BG,
+                    ERROR_BORDER
+            );
+
             return;
         }
 
-        updateStatus("Connecting to EMS...", PRIMARY, PRIMARY, new Color(239, 246, 255), new Color(191, 219, 254));
+        // =========================================================
+        // Connecting Status
+        // =========================================================
+
+        updateStatus(
+                "Connecting to EMS...",
+                PRIMARY,
+                PRIMARY,
+                new Color(239, 246, 255),
+                new Color(191, 219, 254)
+        );
+
         loginButton.setEnabled(false);
 
+        // =========================================================
+        // Login Thread
+        // =========================================================
+
         Thread loginThread = new Thread(() -> {
-            AgentLoginService.LoginResult result = loginService.login(username, password);
+
+            AgentLoginService.LoginResult result =
+                    loginService.login(username, password);
 
             SwingUtilities.invokeLater(() -> {
-                if (result != null && result.isSuccess()) {
-                    updateStatus("Login successful", SUCCESS_GREEN, SUCCESS_TEXT, SUCCESS_BG, SUCCESS_BORDER);
 
-                    System.out.println("Employee ID: " + result.getEmployeeId());
-                    System.out.println("Employee Code: " + result.getEmployeeCode());
+                // =====================================================
+                // ONLINE LOGIN SUCCESS
+                // =====================================================
+
+                if (result != null && result.isSuccess()) {
+
+                    // =================================================
+                    // Remember Me
+                    // =================================================
+
+                    if (rememberMeCheckBox.isSelected()) {
+
+                        boolean saved =
+                                WindowsCredentialManager.saveCredentials(
+                                        username,
+                                        password
+                                );
+
+                        if (!saved) {
+
+                            System.err.println(
+                                    "Login succeeded, but Remember Me credentials could not be saved."
+                            );
+                        }
+
+                    } else {
+
+                        // User explicitly unchecked Remember Me.
+                        // Remove previously saved credentials.
+
+                        WindowsCredentialManager.clearCredentials();
+                    }
+
+
+                    // =================================================
+                    // Save Offline Authorization
+                    // =================================================
+
+                    boolean offlineAuthorizationSaved =
+                            OfflineAuthorizationManager.saveAuthorization(
+                                    result.getEmployeeId(),
+                                    result.getEmployeeCode(),
+                                    username,
+                                    deviceId
+                            );
+
+                    if (!offlineAuthorizationSaved) {
+
+                        System.err.println(
+                                "WARNING: Offline authorization could not be saved."
+                        );
+
+                    } else {
+
+                        System.out.println(
+                                "Offline authorization saved successfully."
+                        );
+                    }
+
+
+                    // =================================================
+                    // Login Successful
+                    // =================================================
+
+                    updateStatus(
+                            "Login successful",
+                            SUCCESS_GREEN,
+                            SUCCESS_TEXT,
+                            SUCCESS_BG,
+                            SUCCESS_BORDER
+                    );
+
+                    System.out.println(
+                            "Employee ID: "
+                                    + result.getEmployeeId()
+                    );
+
+                    System.out.println(
+                            "Employee Code: "
+                                    + result.getEmployeeCode()
+                    );
+
+
+                    // =================================================
+                    // Continue to AgentApplication
+                    // =================================================
 
                     if (onLoginSuccess != null) {
+
                         onLoginSuccess.accept(result);
                     }
+
+
+                    // =====================================================
+                    // SERVER UNAVAILABLE → OFFLINE LOGIN
+                    // =====================================================
+
+                } else if (result != null
+                        && result.isServerUnavailable()) {
+
+                    System.out.println(
+                            "EMS server unavailable."
+                    );
+
+                    System.out.println(
+                            "Checking offline authorization..."
+                    );
+
+
+                    // =================================================
+                    // Load Offline Authorization
+                    // =================================================
+
+                    OfflineAuthorizationManager.OfflineAuthorization authorization =
+                            OfflineAuthorizationManager.getAuthorization();
+
+
+                    // =================================================
+                    // No Offline Authorization
+                    // =================================================
+
+                    if (authorization == null) {
+
+                        System.out.println(
+                                "No offline authorization found."
+                        );
+
+                        updateStatus(
+                                "EMS unavailable - Offline access not authorized",
+                                ERROR_RED,
+                                ERROR_RED,
+                                ERROR_BG,
+                                ERROR_BORDER
+                        );
+
+                        loginButton.setEnabled(true);
+
+                        return;
+                    }
+
+
+                    // =================================================
+                    // Validate Offline Authorization
+                    // =================================================
+
+                    boolean authorized =
+                            OfflineAuthorizationManager.isAuthorized(
+                                    authorization.getEmployeeId(),
+                                    deviceId
+                            );
+
+
+                    // =================================================
+                    // Offline Authorization Valid
+                    // =================================================
+
+                    if (authorized) {
+
+                        System.out.println(
+                                "Offline authorization verified."
+                        );
+
+                        System.out.println(
+                                "Offline Employee ID: "
+                                        + authorization.getEmployeeId()
+                        );
+
+                        System.out.println(
+                                "Offline Employee Code: "
+                                        + authorization.getEmployeeCode()
+                        );
+
+                        System.out.println(
+                                "Offline Device ID: "
+                                        + authorization.getDeviceId()
+                        );
+
+
+                        // =============================================
+                        // Create Offline Login Result
+                        // =============================================
+
+                        AgentLoginService.LoginResult offlineResult =
+                                AgentLoginService.LoginResult.offlineSuccess(
+                                        authorization.getEmployeeId(),
+                                        authorization.getEmployeeCode(),
+                                        authorization.getUsername()
+                                );
+
+
+                        // =============================================
+                        // Offline Login Successful
+                        // =============================================
+
+                        updateStatus(
+                                "Offline login successful",
+                                SUCCESS_GREEN,
+                                SUCCESS_TEXT,
+                                SUCCESS_BG,
+                                SUCCESS_BORDER
+                        );
+
+
+                        // =============================================
+                        // Continue to AgentApplication
+                        // =============================================
+
+                        if (onLoginSuccess != null) {
+
+                            onLoginSuccess.accept(offlineResult);
+                        }
+
+
+                        // =================================================
+                        // Offline Authorization Invalid / Expired
+                        // =================================================
+
+                    } else {
+
+                        System.out.println(
+                                "Offline authorization is invalid or expired."
+                        );
+
+                        updateStatus(
+                                "Offline access expired or unauthorized",
+                                ERROR_RED,
+                                ERROR_RED,
+                                ERROR_BG,
+                                ERROR_BORDER
+                        );
+
+                        loginButton.setEnabled(true);
+                    }
+
+
+                    // =====================================================
+                    // INVALID CREDENTIALS / OTHER SERVER ERROR
+                    // =====================================================
+
                 } else {
-                    updateStatus("Invalid credentials", ERROR_RED, ERROR_RED, ERROR_BG, ERROR_BORDER);
+
+                    if (result != null
+                            && result.isInvalidCredentials()) {
+
+                        updateStatus(
+                                "Invalid credentials",
+                                ERROR_RED,
+                                ERROR_RED,
+                                ERROR_BG,
+                                ERROR_BORDER
+                        );
+
+                    } else {
+
+                        updateStatus(
+                                "Unable to connect to EMS",
+                                ERROR_RED,
+                                ERROR_RED,
+                                ERROR_BG,
+                                ERROR_BORDER
+                        );
+                    }
+
                     loginButton.setEnabled(true);
                 }
             });
+
         });
 
         loginThread.setDaemon(true);
         loginThread.start();
+    }
+
+
+    /**
+     * Resets the existing LoginWindow so it can be reused after logout.
+     * This does not create a new window and does not perform automatic login.
+     */
+    public void prepareForNewLogin() {
+        SwingUtilities.invokeLater(() -> {
+            loginButton.setEnabled(true);
+
+            updateStatus(
+                    "Ready to connect",
+                    SUCCESS_GREEN,
+                    SUCCESS_TEXT,
+                    SUCCESS_BG,
+                    SUCCESS_BORDER
+            );
+
+            if (passwordVisible) {
+                passwordVisible = false;
+                passwordField.setEchoChar('•');
+                passwordToggle.setVisibleState(false);
+            }
+
+            usernameField.requestFocusInWindow();
+        });
     }
 
     // =========================================================
@@ -1500,3 +1960,4 @@ public class LoginWindow extends JFrame {
 
 
 }
+

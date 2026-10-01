@@ -88,19 +88,35 @@ public class PersistentAttendanceQueue {
         }
     }
 
-    /**
-     * Returns the oldest queued event
-     * without removing it.
-     */
     public synchronized AttendanceEvent peek() {
 
         List<String> lines = readLines();
+        boolean corruptedRemoved = false;
 
-        if (lines.isEmpty()) {
-            return null;
+        while (!lines.isEmpty()) {
+            try {
+                AttendanceEvent event = parseEvent(lines.get(0));
+                if (corruptedRemoved) {
+                    writeLines(lines);
+                }
+                return event;
+            } catch (Exception e) {
+                System.out.println(
+                        "Discarding corrupted attendance event from queue: "
+                                + lines.get(0)
+                                + " | Reason: "
+                                + e.getMessage()
+                );
+                lines.remove(0);
+                corruptedRemoved = true;
+            }
         }
 
-        return parseEvent(lines.get(0));
+        if (corruptedRemoved) {
+            writeLines(lines);
+        }
+
+        return null;
     }
 
     /**
