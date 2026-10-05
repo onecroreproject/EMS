@@ -5137,31 +5137,20 @@ public class EmployeeWorkspaceWindow extends JFrame {
         else if ("WORKING".equals(localStatus)) {
 
             /*
-             * ONLINE:
-             * Employee Work Time depends on Task Timer running.
+             * Employee Work Time is based on the employee
+             * WORKING state, not on whether Task Timer is running.
              *
-             * OFFLINE:
-             * Employee Work Time runs locally even though
-             * Task Timer is disabled.
+             * When inactivity reaches the configured threshold:
+             *
+             * WORKING -> IDLE
+             *
+             * Employee Work Time stops.
              */
-            if ((workRunning || AgentApplication.isOfflineMode())
+
+            if ("WORKING".equals(localStatus)
                     && inactiveSeconds >= idleThresholdSeconds) {
 
-                long currentWorkSegmentSeconds = 0L;
-
-                if (employeeWorkSegmentStartNanos > 0L) {
-
-                    currentWorkSegmentSeconds =
-                            Math.max(
-                                    0L,
-                                    (nowNanos
-                                            - employeeWorkSegmentStartNanos)
-                                            / 1_000_000_000L
-                            );
-                }
-
-                employeeWorkAccumulatedSeconds +=
-                        currentWorkSegmentSeconds;
+                closeEmployeeWorkSegment();
 
                 /*
                  * Task Timer is only active online.
@@ -5181,13 +5170,14 @@ public class EmployeeWorkspaceWindow extends JFrame {
                             currentTaskWorkSeconds;
                 }
 
-                employeeWorkSegmentStartNanos = 0L;
-
                 /*
-                 * Task timer must not continue while IDLE.
+                 * Stop Task Timer while IDLE.
                  */
                 workSegmentStartNanos = 0L;
 
+                /*
+                 * Start Idle segment.
+                 */
                 idleSegmentStartNanos = nowNanos;
 
                 idleAfterBreakLunch = false;
@@ -5206,18 +5196,19 @@ public class EmployeeWorkspaceWindow extends JFrame {
 
         else if ("IDLE".equals(localStatus)) {
 
+            /*
+             * After Break/Lunch, employee must explicitly
+             * start the timer again.
+             */
             if (idleAfterBreakLunch) {
 
-                /*
-                 * Stay IDLE until the user explicitly starts
-                 * the timer after Break/Lunch.
-                 */
+                // Stay IDLE until the user explicitly
+                // starts work after Break/Lunch.
 
             }
 
             else if (inactiveSeconds < idleThresholdSeconds
-                    && (workRunning
-                    || AgentApplication.isOfflineMode())) {
+                    && "IDLE".equals(localStatus)) {
 
                 /*
                  * Close the current idle segment.
@@ -5798,7 +5789,7 @@ public class EmployeeWorkspaceWindow extends JFrame {
 
         workSegmentStartNanos = 0L;
 
-        employeeWorkSegmentStartNanos = 0L;
+        closeEmployeeWorkSegment();
 
         updateStatus("BREAK");
 
@@ -5917,27 +5908,9 @@ public class EmployeeWorkspaceWindow extends JFrame {
 
 
         /*
-         * Store current employee work duration.
-         */
-        if (employeeWorkSegmentStartNanos > 0L) {
-
-            long elapsedSeconds =
-                    Math.max(
-                            0L,
-                            (System.nanoTime()
-                                    - employeeWorkSegmentStartNanos)
-                                    / 1_000_000_000L
-                    );
-
-            employeeWorkAccumulatedSeconds +=
-                    elapsedSeconds;
-        }
-
-
-        /*
          * Clear running work segment.
          */
-        employeeWorkSegmentStartNanos = 0L;
+        closeEmployeeWorkSegment();
         workSegmentStartNanos = 0L;
         workAccumulatedSeconds = 0L;
         currentTaskWorkId = null;
@@ -6345,6 +6318,35 @@ public class EmployeeWorkspaceWindow extends JFrame {
 
 
     // =========================================================
+    // EMPLOYEE WORK TIME - CLOSE CURRENT WORK SEGMENT
+    // =========================================================
+
+    private void closeEmployeeWorkSegment() {
+
+        if (employeeWorkSegmentStartNanos <= 0L) {
+            return;
+        }
+
+        long nowNanos =
+                System.nanoTime();
+
+        long currentEmployeeWorkSeconds =
+                Math.max(
+                        0L,
+                        (
+                                nowNanos
+                                        - employeeWorkSegmentStartNanos
+                        ) / 1_000_000_000L
+                );
+
+        employeeWorkAccumulatedSeconds +=
+                currentEmployeeWorkSeconds;
+
+        employeeWorkSegmentStartNanos = 0L;
+    }
+
+
+    // =========================================================
     // TASK WORK - STOP
     // =========================================================
 
@@ -6482,31 +6484,11 @@ public class EmployeeWorkspaceWindow extends JFrame {
 
             /*
              * -----------------------------------------------------
-             * BACKEND DURATION
-             * -----------------------------------------------------
-             *
-             * Backend duration is the source of truth
-             * for the completed task session.
-             */
-            long stoppedDurationSeconds =
-                    parseLongJsonValue(
-                            response.body(),
-                            "durationSeconds"
-                    );
-
-
-            if (stoppedDurationSeconds >= 0L) {
-
-                employeeWorkAccumulatedSeconds +=
-                        stoppedDurationSeconds;
-            }
-
-
-            /*
-             * -----------------------------------------------------
              * STOP WORKING STATE
              * -----------------------------------------------------
              */
+            closeEmployeeWorkSegment();
+
             workRunning = false;
 
             AgentApplication.setTaskWorkRunning(
@@ -6514,8 +6496,6 @@ public class EmployeeWorkspaceWindow extends JFrame {
             );
 
             workSegmentStartNanos = 0L;
-
-            employeeWorkSegmentStartNanos = 0L;
 
             currentTaskWorkId = null;
 
@@ -6693,6 +6673,8 @@ public class EmployeeWorkspaceWindow extends JFrame {
                     if (workRunning) {
                         return;
                     }
+                } else {
+                    closeEmployeeWorkSegment();
                 }
             }
 
@@ -6702,21 +6684,7 @@ public class EmployeeWorkspaceWindow extends JFrame {
              */
             if (AgentApplication.isOfflineMode()) {
 
-                if (employeeWorkSegmentStartNanos > 0L) {
-
-                    long currentEmployeeWorkSeconds =
-                            Math.max(
-                                    0L,
-                                    (System.nanoTime()
-                                            - employeeWorkSegmentStartNanos)
-                                            / 1_000_000_000L
-                            );
-
-                    employeeWorkAccumulatedSeconds +=
-                            currentEmployeeWorkSeconds;
-                }
-
-                employeeWorkSegmentStartNanos = 0L;
+                closeEmployeeWorkSegment();
 
                 workRunning = false;
                 workSegmentStartNanos = 0L;
@@ -8201,23 +8169,8 @@ public class EmployeeWorkspaceWindow extends JFrame {
                 restoreNowNanos
                         - (elapsedSeconds * 1_000_000_000L);
 
-        long employeeElapsedSeconds =
-                Math.max(
-                        0L,
-                        java.time.Duration.between(
-                                Instant.ofEpochMilli(
-                                        Math.max(
-                                                workStartedAtMillis,
-                                                currentTaskStartedAtMillis
-                                        )
-                                ),
-                                Instant.now()
-                        ).getSeconds()
-                );
-
         employeeWorkSegmentStartNanos =
-                restoreNowNanos
-                        - (employeeElapsedSeconds * 1_000_000_000L);
+                restoreNowNanos;
 
         updateStatus("WORKING");
 
