@@ -8207,7 +8207,7 @@ public class EmployeeWorkspaceWindow extends JFrame {
                         java.time.Duration.between(
                                 Instant.ofEpochMilli(
                                         Math.max(
-                                                workspaceStartedAtMillis,
+                                                workStartedAtMillis,
                                                 currentTaskStartedAtMillis
                                         )
                                 ),

@@ -8,6 +8,10 @@ public class ApplicationInfo {
     private final int processId;
     private final String windowTitle;
 
+    // NEW
+    private final String url;
+    private final String domain;
+
     private final Instant startedAt;
     private final Instant endedAt;
 
@@ -17,6 +21,8 @@ public class ApplicationInfo {
             String processName,
             int processId,
             String windowTitle,
+            String url,
+            String domain,
             Instant startedAt,
             Instant endedAt,
             long durationSeconds
@@ -24,6 +30,8 @@ public class ApplicationInfo {
         this.processName = processName;
         this.processId = processId;
         this.windowTitle = windowTitle;
+        this.url = url;
+        this.domain = domain;
         this.startedAt = startedAt;
         this.endedAt = endedAt;
         this.durationSeconds = durationSeconds;
@@ -39,6 +47,16 @@ public class ApplicationInfo {
 
     public String getWindowTitle() {
         return windowTitle;
+    }
+
+    // NEW
+    public String getUrl() {
+        return url;
+    }
+
+    // NEW
+    public String getDomain() {
+        return domain;
     }
 
     public Instant getStartedAt() {
@@ -60,6 +78,8 @@ public class ApplicationInfo {
                 "processName='" + processName + '\'' +
                 ", processId=" + processId +
                 ", windowTitle='" + windowTitle + '\'' +
+                ", url='" + url + '\'' +
+                ", domain='" + domain + '\'' +
                 ", startedAt=" + startedAt +
                 ", endedAt=" + endedAt +
                 ", durationSeconds=" + durationSeconds +

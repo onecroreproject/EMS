@@ -102,6 +102,16 @@ public class ApplicationActivitySender {
                 + escape(activity.getWindowTitle())
                 + "\","
 
+                // NEW
+                + "\"url\":\""
+                + escape(activity.getUrl())
+                + "\","
+
+                // NEW
+                + "\"domain\":\""
+                + escape(activity.getDomain())
+                + "\","
+
                 + "\"startedAt\":\""
                 + activity.getStartedAt()
                 + "\","

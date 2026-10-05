@@ -3,6 +3,7 @@ package org.example.ota.updater;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 
 public class AgentUpdater {
 
@@ -17,6 +18,11 @@ public class AgentUpdater {
     private static final Path UPDATE_LOG =
             LOG_DIRECTORY.resolve(
                     "updater.log"
+            );
+
+    private static final Path MSI_INSTALL_LOG =
+            LOG_DIRECTORY.resolve(
+                    "ota-msi-install.log"
             );
 
 
@@ -128,6 +134,23 @@ public class AgentUpdater {
 
             /*
              * =========================================
+             * PREPARE MSI LOG
+             * =========================================
+             */
+
+            Files.createDirectories(
+                    LOG_DIRECTORY
+            );
+
+
+            log(
+                    "MSI verbose log: "
+                            + MSI_INSTALL_LOG
+            );
+
+
+            /*
+             * =========================================
              * INSTALL MSI
              * =========================================
              */
@@ -144,7 +167,9 @@ public class AgentUpdater {
                             "/i",
                             installer.toString(),
                             "/qn",
-                            "/norestart"
+                            "/norestart",
+                            "/L*v",
+                            MSI_INSTALL_LOG.toString()
                     )
                             .inheritIO()
                             .start();
@@ -165,9 +190,6 @@ public class AgentUpdater {
              *
              * 0    = success
              * 3010 = success, reboot required
-             *
-             * Since /norestart is used, both are
-             * treated as successful installation.
              */
 
             if (exitCode != 0
@@ -175,6 +197,11 @@ public class AgentUpdater {
 
                 log(
                         "MSI installation failed."
+                );
+
+                log(
+                        "Check MSI log: "
+                                + MSI_INSTALL_LOG
                 );
 
                 return;

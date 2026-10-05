@@ -13,6 +13,10 @@ public class ApplicationActivityRequest {
     private int processId;
     private String windowTitle;
 
+    // NEW
+    private String url;
+    private String domain;
+
     private Instant startedAt;
     private Instant endedAt;
 
@@ -30,6 +34,10 @@ public class ApplicationActivityRequest {
         this.processName = activity.getProcessName();
         this.processId = activity.getProcessId();
         this.windowTitle = activity.getWindowTitle();
+
+        // NEW
+        this.url = activity.getUrl();
+        this.domain = activity.getDomain();
 
         this.startedAt = activity.getStartedAt();
         this.endedAt = activity.getEndedAt();
@@ -58,6 +66,16 @@ public class ApplicationActivityRequest {
         return windowTitle;
     }
 
+    // NEW
+    public String getUrl() {
+        return url;
+    }
+
+    // NEW
+    public String getDomain() {
+        return domain;
+    }
+
     public Instant getStartedAt() {
         return startedAt;
     }
@@ -79,6 +97,8 @@ public class ApplicationActivityRequest {
                 ", processName='" + processName + '\'' +
                 ", processId=" + processId +
                 ", windowTitle='" + windowTitle + '\'' +
+                ", url='" + url + '\'' +
+                ", domain='" + domain + '\'' +
                 ", startedAt=" + startedAt +
                 ", endedAt=" + endedAt +
                 ", durationSeconds=" + durationSeconds +
