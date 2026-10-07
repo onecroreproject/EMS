@@ -6,6 +6,8 @@ import org.example.commucnication.AgentLoginService;
 import org.example.config.AgentConfig;
 import org.example.security.WindowsCredentialManager;
 import org.example.security.OfflineAuthorizationManager;
+import org.example.ui.theme.UITheme;
+import static org.example.ui.theme.UITheme.*;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -1027,7 +1029,13 @@ public class LoginWindow extends JFrame {
         statusText.setForeground(textColor);
         statusLabel.setText(message);
         statusLabel.setForeground(textColor);
+        
+        if (dotColor == ERROR_RED && !this.isVisible()) {
+            this.setVisible(true);
+            this.toFront();
+        }
     }
+
 
     // =========================================================
     // Perfectly Centered Vector Icons
@@ -1191,7 +1199,13 @@ public class LoginWindow extends JFrame {
         }
     }
 
-
+    public boolean attemptAutoLogin() {
+        if (!usernameField.getText().trim().isEmpty() && passwordField.getPassword().length > 0) {
+            handleLogin();
+            return true;
+        }
+        return false;
+    }
 
 // =========================================================
 // Login Execution Logic
@@ -1287,7 +1301,8 @@ public class LoginWindow extends JFrame {
                                     result.getEmployeeId(),
                                     result.getEmployeeCode(),
                                     username,
-                                    deviceId
+                                    deviceId,
+                                    result.getRefreshToken()
                             );
 
                     if (!offlineAuthorizationSaved) {
@@ -1380,6 +1395,10 @@ public class LoginWindow extends JFrame {
                         );
 
                         loginButton.setEnabled(true);
+                        
+                        if (!isVisible()) {
+                            setVisible(true);
+                        }
 
                         return;
                     }
@@ -1430,7 +1449,8 @@ public class LoginWindow extends JFrame {
                                 AgentLoginService.LoginResult.offlineSuccess(
                                         authorization.getEmployeeId(),
                                         authorization.getEmployeeCode(),
-                                        authorization.getUsername()
+                                        authorization.getUsername(),
+                                        authorization.getRefreshToken()
                                 );
 
 
@@ -1476,6 +1496,10 @@ public class LoginWindow extends JFrame {
                         );
 
                         loginButton.setEnabled(true);
+                        
+                        if (!isVisible()) {
+                            setVisible(true);
+                        }
                     }
 
 
@@ -1508,12 +1532,16 @@ public class LoginWindow extends JFrame {
                     }
 
                     loginButton.setEnabled(true);
+                    
+                    if (!isVisible()) {
+                        setVisible(true);
+                    }
                 }
             });
 
         });
 
-        loginThread.setDaemon(true);
+        loginThread.setDaemon(false);
         loginThread.start();
     }
 

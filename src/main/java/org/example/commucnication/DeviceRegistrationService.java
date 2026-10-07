@@ -27,7 +27,8 @@ public class DeviceRegistrationService {
 
     public boolean registerDevice(
             String employeeId,
-            String employeeCode) {
+            String employeeCode,
+            String token) {
 
         try {
 
@@ -61,9 +62,14 @@ public class DeviceRegistrationService {
             HttpRequest request =
                     HttpRequest.newBuilder()
                             .uri(URI.create(url))
+                            .header("Authorization", "Bearer " + org.example.config.AgentTokenHolder.getToken())
                             .header(
                                     "Content-Type",
                                     "application/json"
+                            )
+                            .header(
+                                    "Authorization",
+                                    "Bearer " + token
                             )
                             .POST(
                                     HttpRequest.BodyPublishers

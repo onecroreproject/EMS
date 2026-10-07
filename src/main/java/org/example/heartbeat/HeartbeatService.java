@@ -17,9 +17,14 @@ public class HeartbeatService {
         this.deviceId = deviceId;
     }
 
-    public void sendHeartbeat() {
+    public String sendHeartbeat() {
 
         try {
+            if (org.example.config.AgentTokenHolder.getToken() == null || org.example.config.AgentTokenHolder.getToken().isBlank()) {
+                if (org.example.config.AgentTokenHolder.getRefreshToken() != null && !org.example.config.AgentTokenHolder.getRefreshToken().isBlank()) {
+                    org.example.config.TokenRefreshService.refreshToken(serverUrl);
+                }
+            }
 
             String url = serverUrl
                     + "/api/agent/heartbeat?deviceId="
@@ -27,6 +32,7 @@ public class HeartbeatService {
 
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(url))
+                            .header("Authorization", "Bearer " + org.example.config.AgentTokenHolder.getToken())
                     .POST(HttpRequest.BodyPublishers.noBody())
                     .build();
 
@@ -36,13 +42,28 @@ public class HeartbeatService {
                             HttpResponse.BodyHandlers.ofString()
                     );
 
-            // Silent success for heartbeat.
+            if (response.statusCode() == 302 || response.statusCode() == 401 || response.statusCode() == 403 || response.statusCode() == 500) {
+                // The server might return 302 or 500 for malformed JWT. Let's try refreshing if the token is invalid
+                if (org.example.config.AgentTokenHolder.getRefreshToken() != null && !org.example.config.AgentTokenHolder.getRefreshToken().isBlank()) {
+                    boolean refreshed = org.example.config.TokenRefreshService.refreshToken(serverUrl);
+                    if (refreshed) {
+                        // Retry heartbeat once
+                        HttpRequest retryRequest = HttpRequest.newBuilder()
+                                .uri(URI.create(url))
+                                .header("Authorization", "Bearer " + org.example.config.AgentTokenHolder.getToken())
+                                .POST(HttpRequest.BodyPublishers.noBody())
+                                .build();
+                        response = httpClient.send(retryRequest, HttpResponse.BodyHandlers.ofString());
+                    }
+                }
+            }
+
+            return response.body();
 
         } catch (Exception e) {
 
-            // Too noisy to print every 10 seconds, but we can print a single line
-            // or just suppress it entirely. Let's make it a WARN if we must print.
             System.out.println("WARN  Heartbeat failed: " + e.getMessage());
+            return null;
         }
     }
 

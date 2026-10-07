@@ -126,50 +126,75 @@ public class AgentConfig {
         return serverUrl.trim();
     }
 
-    public int getRequiredWorkHours() {
+    private int requiredHours = 9;
+    private int idleGraceMinutes = 2;
+    private long autoWorkEndMinutes = 60;
+    private int heartbeatIntervalSeconds = 10;
+    private int loginReminderIntervalSeconds = 60;
 
-        return Integer.parseInt(
-                properties.getProperty(
-                        "workday.required-hours",
-                        "9"
-                ).trim()
-        );
+    public void fetchDynamicConfig(String serverUrl) {
+        try {
+            java.net.URL url = new java.net.URL(serverUrl + "/api/agent/config");
+            java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setConnectTimeout(5000);
+            conn.setReadTimeout(5000);
+
+            if (conn.getResponseCode() == 200) {
+                java.io.BufferedReader in = new java.io.BufferedReader(new java.io.InputStreamReader(conn.getInputStream()));
+                String inputLine;
+                StringBuilder content = new StringBuilder();
+                while ((inputLine = in.readLine()) != null) {
+                    content.append(inputLine);
+                }
+                in.close();
+                String json = content.toString();
+                
+                // Simple parsing since we can't use complex JSON libs easily here
+                if (json.contains("\"requiredHours\":")) {
+                    String part = json.split("\"requiredHours\":")[1].split(",")[0].replaceAll("[^0-9]", "");
+                    requiredHours = Integer.parseInt(part);
+                }
+                if (json.contains("\"idleGraceMinutes\":")) {
+                    String part = json.split("\"idleGraceMinutes\":")[1].split(",")[0].replaceAll("[^0-9]", "");
+                    idleGraceMinutes = Integer.parseInt(part);
+                }
+                if (json.contains("\"autoWorkEndMinutes\":")) {
+                    String part = json.split("\"autoWorkEndMinutes\":")[1].split(",")[0].replaceAll("[^0-9]", "");
+                    autoWorkEndMinutes = Long.parseLong(part);
+                }
+                if (json.contains("\"heartbeatIntervalSeconds\":")) {
+                    String part = json.split("\"heartbeatIntervalSeconds\":")[1].split(",")[0].replaceAll("[^0-9]", "");
+                    heartbeatIntervalSeconds = Integer.parseInt(part);
+                }
+                if (json.contains("\"loginReminderIntervalSeconds\":")) {
+                    String part = json.split("\"loginReminderIntervalSeconds\":")[1].split("}")[0].replaceAll("[^0-9]", "");
+                    loginReminderIntervalSeconds = Integer.parseInt(part);
+                }
+                System.out.println("Dynamic configuration loaded successfully from server.");
+            }
+        } catch (Exception e) {
+            System.out.println("Failed to fetch dynamic config. Using default fallbacks: " + e.getMessage());
+        }
+    }
+
+    public int getRequiredWorkHours() {
+        return requiredHours;
     }
 
     public int getIdleGraceMinutes() {
-
-        return Integer.parseInt(
-                properties.getProperty(
-                        "idle.grace-minutes",
-                        "2"
-                ).trim()
-        );
+        return idleGraceMinutes;
     }
 
     public long getAutoWorkEndIdleMinutes() {
+        return autoWorkEndMinutes;
+    }
 
-        String value =
-                properties.getProperty(
-                        "idle.auto-work-end-minutes",
-                        "60"
-                );
+    public int getHeartbeatIntervalSeconds() {
+        return heartbeatIntervalSeconds;
+    }
 
-        try {
-
-            long minutes =
-                    Long.parseLong(value);
-
-            return Math.max(1L, minutes);
-
-        } catch (NumberFormatException e) {
-
-            System.out.println(
-                    "Invalid idle.auto-work-end-minutes value: "
-                            + value
-                            + ". Using default: 60 minutes."
-            );
-
-            return 60L;
-        }
+    public int getLoginReminderIntervalSeconds() {
+        return loginReminderIntervalSeconds;
     }
 }

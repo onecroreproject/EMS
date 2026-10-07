@@ -57,12 +57,13 @@ public class UpdateChecker {
                         + "&platform=windows";
 
         System.out.println(
-                "OTA: Checking for updates..."
+                "OTA: CHECKING"
         );
 
         HttpRequest request =
                 HttpRequest.newBuilder()
                         .uri(URI.create(url))
+                            .header("Authorization", "Bearer " + org.example.config.AgentTokenHolder.getToken())
                         .timeout(
                                 Duration.ofSeconds(15)
                         )
@@ -125,7 +126,7 @@ public class UpdateChecker {
         }
 
         System.out.println(
-                "OTA: New version available: "
+                "OTA: UPDATE_AVAILABLE "
                         + metadata.getVersion()
         );
 

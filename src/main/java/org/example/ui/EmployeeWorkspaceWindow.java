@@ -10,6 +10,11 @@ import org.example.commucnication.AgentLoginService;
 import org.example.activity.UserActivityMonitor;
 import org.example.config.AgentConfig;
 
+import org.example.ui.theme.UITheme;
+import org.example.ui.theme.Icons;
+import org.example.ui.theme.Icons.IconType;
+import static org.example.ui.theme.UITheme.*;
+import static org.example.ui.theme.Icons.*;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.plaf.basic.BasicComboBoxUI;
@@ -42,540 +47,28 @@ import java.util.regex.Pattern;
  * First working condition:
  *
  * LOGIN
- *   ↓
+ *   Ã¢â€ â€œ
  * WORKING
- *   ↓
+ *   Ã¢â€ â€œ
  * Work timer counts
  *
  * BREAK:
- *   WORKING → BREAK → WORKING
+ *   WORKING Ã¢â€ â€™ BREAK Ã¢â€ â€™ WORKING
  *
  * LUNCH:
- *   WORKING → LUNCH → WORKING
+ *   WORKING Ã¢â€ â€™ LUNCH Ã¢â€ â€™ WORKING
  *
  * IDLE:
  *   120 seconds without keyboard/mouse activity
- *   WORKING → IDLE
+ *   WORKING Ã¢â€ â€™ IDLE
  *
  * activity resumes:
- *   IDLE → WORKING
+ *   IDLE Ã¢â€ â€™ WORKING
  *
  * Attendance events are sent using the same device ID
  * used by AgentApplication.
  */
 public class EmployeeWorkspaceWindow extends JFrame {
-
-    // =========================================================
-    // COLOR PALETTE
-    // =========================================================
-
-    private static final Color NAVY_BANNER =
-            new Color(0, 93, 158);
-
-    private static final Color BG_CANVAS =
-            new Color(238, 244, 250);
-
-    private static final Color BG_CARD =
-            Color.WHITE;
-
-    private static final Color TEXT_DARK =
-            new Color(15, 23, 42);
-
-    private static final Color TEXT_BODY =
-            new Color(51, 65, 85);
-
-    private static final Color TEXT_MUTED =
-            new Color(100, 116, 139);
-
-    private static final Color BORDER_CARD =
-            new Color(226, 232, 240);
-
-    private static final Color BORDER_INPUT =
-            new Color(203, 213, 225);
-
-    private static final Color PRIMARY_BLUE =
-            new Color(2, 132, 199);
-
-    private static final Color DANGER_RED =
-            new Color(220, 38, 38);
-
-    private static final Color DANGER_RED_HOVER =
-            new Color(185, 28, 28);
-
-    private static final Color SUCCESS_GREEN =
-            new Color(22, 163, 74);
-
-    private static final Color WARNING_ORANGE =
-            new Color(234, 88, 12);
-
-    private static final Color PURPLE_TEXT =
-            new Color(124, 58, 237);
-
-
-    // Attendance card colors
-
-    private static final Color MINI_GREEN_BG =
-            new Color(236, 253, 245);
-
-    private static final Color MINI_GREEN_BORDER =
-            new Color(187, 247, 208);
-
-    private static final Color MINI_BLUE_BG =
-            new Color(239, 246, 255);
-
-    private static final Color MINI_BLUE_BORDER =
-            new Color(191, 219, 254);
-
-    private static final Color MINI_ORANGE_BG =
-            new Color(255, 251, 235);
-
-    private static final Color MINI_ORANGE_BORDER =
-            new Color(254, 230, 138);
-
-    private static final Color MINI_PURPLE_BG =
-            new Color(245, 243, 255);
-
-    private static final Color MINI_PURPLE_BORDER =
-            new Color(221, 214, 254);
-
-    private static final Color MINI_ROSE_BG =
-            new Color(255, 241, 242);
-
-    private static final Color MINI_ROSE_BORDER =
-            new Color(254, 205, 211);
-
-
-    // Bottom buttons
-
-    private static final Color BREAK_BG =
-            new Color(240, 248, 255);
-
-    private static final Color BREAK_BORDER =
-            new Color(186, 224, 247);
-
-    private static final Color LUNCH_BG =
-            new Color(248, 244, 255);
-
-    private static final Color LUNCH_BORDER =
-            new Color(224, 203, 254);
-
-
-    private static final String FONT_FAMILY =
-            getApplicationFont();
-
-
-    private static String getApplicationFont() {
-
-        String[] fonts = {
-                "Segoe UI",
-                "Public Sans",
-                "Inter",
-                "Roboto",
-                "Helvetica Neue",
-                "Arial"
-        };
-
-        String[] available =
-                GraphicsEnvironment
-                        .getLocalGraphicsEnvironment()
-                        .getAvailableFontFamilyNames();
-
-        for (String wanted : fonts) {
-
-            for (String current : available) {
-
-                if (current.equalsIgnoreCase(wanted)) {
-                    return current;
-                }
-            }
-        }
-
-        return "Segoe UI";
-    }
-
-
-    // =========================================================
-    // VECTOR ICONS
-    // =========================================================
-
-    private enum IconType {
-        CALENDAR,
-        CLOCK,
-        TASK,
-        DURATION,
-        IDLE,
-        BREAK,
-        LUNCH,
-        START,
-        STOP,
-        SETTINGS,
-        LOGOUT
-    }
-
-
-    private static class WorkspaceIcon implements Icon {
-
-        private final IconType type;
-        private final Color color;
-        private final int size;
-
-        WorkspaceIcon(
-                IconType type,
-                Color color,
-                int size
-        ) {
-            this.type = type;
-            this.color = color;
-            this.size = size;
-        }
-
-
-        @Override
-        public int getIconWidth() {
-            return size;
-        }
-
-
-        @Override
-        public int getIconHeight() {
-            return size;
-        }
-
-
-        @Override
-        public void paintIcon(
-                Component component,
-                Graphics graphics,
-                int x,
-                int y
-        ) {
-
-            Graphics2D g2 =
-                    (Graphics2D) graphics.create();
-
-            g2.setRenderingHint(
-                    RenderingHints.KEY_ANTIALIASING,
-                    RenderingHints.VALUE_ANTIALIAS_ON
-            );
-
-            g2.setRenderingHint(
-                    RenderingHints.KEY_STROKE_CONTROL,
-                    RenderingHints.VALUE_STROKE_PURE
-            );
-
-            g2.setColor(color);
-
-            g2.setStroke(
-                    new BasicStroke(
-                            1.7f,
-                            BasicStroke.CAP_ROUND,
-                            BasicStroke.JOIN_ROUND
-                    )
-            );
-
-            int cx = x + size / 2;
-            int cy = y + size / 2;
-
-            switch (type) {
-
-                case CALENDAR -> {
-
-                    g2.drawRoundRect(
-                            x + 2,
-                            y + 3,
-                            size - 4,
-                            size - 5,
-                            3,
-                            3
-                    );
-
-                    g2.drawLine(
-                            x + 2,
-                            y + 7,
-                            x + size - 2,
-                            y + 7
-                    );
-
-                    g2.drawLine(
-                            x + 6,
-                            y + 1,
-                            x + 6,
-                            y + 6
-                    );
-
-                    g2.drawLine(
-                            x + size - 6,
-                            y + 1,
-                            x + size - 6,
-                            y + 6
-                    );
-
-                    g2.fillRect(
-                            x + 5,
-                            y + 10,
-                            2,
-                            2
-                    );
-
-                    g2.fillRect(
-                            x + 9,
-                            y + 10,
-                            2,
-                            2
-                    );
-
-                    g2.fillRect(
-                            x + 13,
-                            y + 10,
-                            2,
-                            2
-                    );
-                }
-
-                case CLOCK, DURATION -> {
-
-                    g2.drawOval(
-                            x + 2,
-                            y + 2,
-                            size - 4,
-                            size - 4
-                    );
-
-                    g2.drawLine(
-                            cx,
-                            cy,
-                            cx,
-                            y + 6
-                    );
-
-                    g2.drawLine(
-                            cx,
-                            cy,
-                            x + size - 6,
-                            cy
-                    );
-                }
-
-                case TASK -> {
-
-                    g2.drawRoundRect(
-                            x + 4,
-                            y + 2,
-                            size - 8,
-                            size - 4,
-                            2,
-                            2
-                    );
-
-                    g2.drawRoundRect(
-                            x + 7,
-                            y,
-                            size - 14,
-                            5,
-                            2,
-                            2
-                    );
-
-                    g2.drawLine(
-                            x + 7,
-                            y + 8,
-                            x + size - 7,
-                            y + 8
-                    );
-
-                    g2.drawLine(
-                            x + 7,
-                            y + 12,
-                            x + size - 7,
-                            y + 12
-                    );
-                }
-
-                case IDLE -> {
-
-                    g2.drawLine(
-                            x + 4,
-                            y + 3,
-                            x + size - 4,
-                            y + 3
-                    );
-
-                    g2.drawLine(
-                            x + 4,
-                            y + size - 3,
-                            x + size - 4,
-                            y + size - 3
-                    );
-
-                    Polygon top = new Polygon();
-                    top.addPoint(x + 4, y + 4);
-                    top.addPoint(x + size - 4, y + 4);
-                    top.addPoint(cx, cy);
-                    g2.drawPolygon(top);
-
-                    Polygon bottom = new Polygon();
-                    bottom.addPoint(cx, cy);
-                    bottom.addPoint(x + size - 4, y + size - 4);
-                    bottom.addPoint(x + 4, y + size - 4);
-                    g2.drawPolygon(bottom);
-                }
-
-                case BREAK -> {
-
-                    g2.drawRoundRect(
-                            x + 3,
-                            y + 5,
-                            size - 7,
-                            size - 8,
-                            3,
-                            3
-                    );
-
-                    g2.drawArc(
-                            x + size - 6,
-                            y + 6,
-                            5,
-                            6,
-                            -90,
-                            180
-                    );
-
-                    g2.drawLine(
-                            x + 5,
-                            y + size - 2,
-                            x + size - 5,
-                            y + size - 2
-                    );
-                }
-
-                case LUNCH -> {
-
-                    g2.drawLine(
-                            x + 5,
-                            y + 3,
-                            x + 5,
-                            y + size - 3
-                    );
-
-                    g2.drawLine(
-                            x + 3,
-                            y + 3,
-                            x + 3,
-                            y + 8
-                    );
-
-                    g2.drawLine(
-                            x + 7,
-                            y + 3,
-                            x + 7,
-                            y + 8
-                    );
-
-                    g2.drawLine(
-                            x + 12,
-                            y + 3,
-                            x + 12,
-                            y + size - 3
-                    );
-
-                    g2.drawLine(
-                            x + 12,
-                            y + 3,
-                            x + 15,
-                            y + 7
-                    );
-                }
-
-                case START -> {
-
-                    Polygon triangle = new Polygon();
-                    triangle.addPoint(x + 4, y + 2);
-                    triangle.addPoint(x + size - 3, cy);
-                    triangle.addPoint(x + 4, y + size - 2);
-                    g2.fillPolygon(triangle);
-                }
-
-                case STOP -> {
-
-                    g2.fillRoundRect(
-                            x + 4,
-                            y + 4,
-                            size - 8,
-                            size - 8,
-                            2,
-                            2
-                    );
-                }
-
-                case SETTINGS -> {
-
-                    g2.drawOval(
-                            x + 5,
-                            y + 5,
-                            size - 10,
-                            size - 10
-                    );
-
-                    for (int i = 0; i < 8; i++) {
-                        double angle = Math.PI * 2 * i / 8;
-                        int x1 = (int) (cx + Math.cos(angle) * 5);
-                        int y1 = (int) (cy + Math.sin(angle) * 5);
-                        int x2 = (int) (cx + Math.cos(angle) * 8);
-                        int y2 = (int) (cy + Math.sin(angle) * 8);
-                        g2.drawLine(x1, y1, x2, y2);
-                    }
-                }
-
-                case LOGOUT -> {
-
-                    g2.drawRoundRect(
-                            x + 3,
-                            y + 2,
-                            7,
-                            size - 4,
-                            2,
-                            2
-                    );
-
-                    g2.drawLine(
-                            x + 8,
-                            cy,
-                            x + size - 3,
-                            cy
-                    );
-
-                    g2.drawLine(
-                            x + size - 7,
-                            cy - 4,
-                            x + size - 3,
-                            cy
-                    );
-
-                    g2.drawLine(
-                            x + size - 7,
-                            cy + 4,
-                            x + size - 3,
-                            cy
-                    );
-                }
-            }
-
-            g2.dispose();
-        }
-    }
-
-
-    private Icon createWorkspaceIcon(
-            IconType type,
-            Color color
-    ) {
-        return new WorkspaceIcon(
-                type,
-                color,
-                17
-        );
-    }
-
 
     // =========================================================
     // WINDOW
@@ -632,6 +125,10 @@ public class EmployeeWorkspaceWindow extends JFrame {
     private JLabel timeHeaderLabel;
 
     private JLabel onlineBadgeLabel;
+
+    private JPanel onlinePill;
+
+    private JPanel onlineDot;
 
     // =========================================================
     // OTA UPDATE
@@ -1345,7 +842,7 @@ public class EmployeeWorkspaceWindow extends JFrame {
         // Maximize and Close are intentionally removed.
         JButton btnMinimize =
                 createTitleButton(
-                        "—",
+                        "Ã¢â‚¬â€",
                         false
                 );
 
@@ -2682,7 +2179,7 @@ public class EmployeeWorkspaceWindow extends JFrame {
         );
 
 
-        JPanel onlinePill =
+        onlinePill =
                 new JPanel(
                         new FlowLayout(
                                 FlowLayout.CENTER,
@@ -2708,9 +2205,11 @@ public class EmployeeWorkspaceWindow extends JFrame {
                                         .VALUE_ANTIALIAS_ON
                         );
 
+                        boolean isOffline = AgentApplication.isOfflineMode();
+
 
                         g2.setColor(
-                                MINI_GREEN_BG
+                                isOffline ? new Color(254, 226, 226) : MINI_GREEN_BG
                         );
 
 
@@ -2725,7 +2224,7 @@ public class EmployeeWorkspaceWindow extends JFrame {
 
 
                         g2.setColor(
-                                MINI_GREEN_BORDER
+                                isOffline ? new Color(252, 165, 165) : MINI_GREEN_BORDER
                         );
 
 
@@ -2758,21 +2257,25 @@ public class EmployeeWorkspaceWindow extends JFrame {
         );
 
 
-        JPanel dot =
+        boolean isOffline = org.example.AgentApplication.isOfflineMode();
+        java.awt.Color statusColor = isOffline ? DANGER_RED : SUCCESS_GREEN;
+        String statusText = isOffline ? "Offline" : "Online";
+
+        onlineDot =
                 createDot(
-                        SUCCESS_GREEN,
+                        statusColor,
                         7
                 );
 
 
         onlinePill.add(
-                dot
+                onlineDot
         );
 
 
         onlineBadgeLabel =
                 new JLabel(
-                        "Online"
+                        statusText
                 );
 
 
@@ -2786,7 +2289,7 @@ public class EmployeeWorkspaceWindow extends JFrame {
 
 
         onlineBadgeLabel.setForeground(
-                SUCCESS_GREEN
+                statusColor
         );
 
 
@@ -3917,7 +3420,7 @@ public class EmployeeWorkspaceWindow extends JFrame {
 
         currentTaskLabel =
                 new JLabel(
-                        "—"
+                        "Ã¢â‚¬â€"
                 );
 
 
@@ -3935,7 +3438,7 @@ public class EmployeeWorkspaceWindow extends JFrame {
 
         startedAtLabel =
                 new JLabel(
-                        "—"
+                        "Ã¢â‚¬â€"
                 );
 
 
@@ -4182,7 +3685,7 @@ public class EmployeeWorkspaceWindow extends JFrame {
 
         clockInMiniLabel =
                 new JLabel(
-                        "—"
+                        "Ã¢â‚¬â€"
                 );
 
 
@@ -4200,7 +3703,7 @@ public class EmployeeWorkspaceWindow extends JFrame {
 
         workHoursMiniLabel =
                 new JLabel(
-                        "—"
+                        "Ã¢â‚¬â€"
                 );
 
 
@@ -4218,7 +3721,7 @@ public class EmployeeWorkspaceWindow extends JFrame {
 
         breakTimeMiniLabel =
                 new JLabel(
-                        "—"
+                        "Ã¢â‚¬â€"
                 );
 
 
@@ -4236,7 +3739,7 @@ public class EmployeeWorkspaceWindow extends JFrame {
 
         lunchTimeMiniLabel =
                 new JLabel(
-                        "—"
+                        "Ã¢â‚¬â€"
                 );
 
 
@@ -4254,7 +3757,7 @@ public class EmployeeWorkspaceWindow extends JFrame {
 
         idleTimeMiniLabel =
                 new JLabel(
-                        "—"
+                        "Ã¢â‚¬â€"
                 );
 
 
@@ -5498,7 +5001,7 @@ public class EmployeeWorkspaceWindow extends JFrame {
                             ? formatMillisTime(
                             currentTaskStartedAtMillis
                     )
-                            : "—"
+                            : "Ã¢â‚¬â€"
             );
         }
 
@@ -5534,6 +5037,28 @@ public class EmployeeWorkspaceWindow extends JFrame {
                             TEXT_MUTED
                     )
             );
+        }
+
+        // =====================================================
+        // ONLINE BADGE
+        // =====================================================
+
+        boolean isOffline = AgentApplication.isOfflineMode();
+        java.awt.Color statusColor = isOffline ? DANGER_RED : SUCCESS_GREEN;
+        String statusText = isOffline ? "Offline" : "Online";
+
+        if (onlineBadgeLabel != null) {
+            onlineBadgeLabel.setText(statusText);
+            onlineBadgeLabel.setForeground(statusColor);
+        }
+
+        if (onlineDot != null) {
+            onlineDot.putClientProperty("dotColor", statusColor);
+            onlineDot.repaint();
+        }
+
+        if (onlinePill != null) {
+            onlinePill.repaint();
         }
 
         // =====================================================
@@ -5930,9 +5455,9 @@ public class EmployeeWorkspaceWindow extends JFrame {
          * Employee stopped the timer manually.
          *
          * WORKING
-         *    ↓
+         *    Ã¢â€ â€œ
          * IDLE_STARTED
-         *    ↓
+         *    Ã¢â€ â€œ
          * PAUSED / IDLE
          */
         idleSegmentStartNanos =
@@ -6056,6 +5581,7 @@ public class EmployeeWorkspaceWindow extends JFrame {
             HttpRequest request =
                     HttpRequest.newBuilder()
                             .uri(URI.create(url))
+                            .header("Authorization", "Bearer " + org.example.config.AgentTokenHolder.getToken())
                             .header(
                                     "Accept",
                                     "application/json"
@@ -6204,15 +5730,15 @@ public class EmployeeWorkspaceWindow extends JFrame {
              * This is the important change.
              *
              * BREAK_ENDED
-             *      ↓
+             *      Ã¢â€ â€œ
              * IDLE_STARTED
-             *      ↓
+             *      Ã¢â€ â€œ
              * wait
-             *      ↓
+             *      Ã¢â€ â€œ
              * START TIMER
-             *      ↓
+             *      Ã¢â€ â€œ
              * IDLE_ENDED
-             *      ↓
+             *      Ã¢â€ â€œ
              * WORKING
              *
              * Same for Lunch and manual Stop Timer.
@@ -6360,12 +5886,9 @@ public class EmployeeWorkspaceWindow extends JFrame {
         if (currentTaskWorkId == null
                 || currentTaskWorkId.isBlank()) {
 
-            showInformation(
-                    "Task Timer",
-                    "No backend task-work session ID is available."
-            );
-
-            return false;
+            System.out.println("No backend task-work session ID is available. Stopping local offline timer instead.");
+            stopOfflineWorkTimer();
+            return true;
         }
 
 
@@ -6407,6 +5930,7 @@ public class EmployeeWorkspaceWindow extends JFrame {
             HttpRequest request =
                     HttpRequest.newBuilder()
                             .uri(URI.create(url))
+                            .header("Authorization", "Bearer " + org.example.config.AgentTokenHolder.getToken())
                             .header(
                                     "Accept",
                                     "application/json"
@@ -6508,11 +6032,11 @@ public class EmployeeWorkspaceWindow extends JFrame {
              * -----------------------------------------------------
              *
              * WORKING
-             *    ↓
+             *    Ã¢â€ â€œ
              * STOP TIMER
-             *    ↓
+             *    Ã¢â€ â€œ
              * IDLE_STARTED
-             *    ↓
+             *    Ã¢â€ â€œ
              * PAUSED / IDLE
              */
             idleSegmentStartNanos =
@@ -7138,6 +6662,11 @@ public class EmployeeWorkspaceWindow extends JFrame {
             return;
         }
 
+        System.out.println(
+                "Clearing remembered credentials on explicit logout."
+        );
+        org.example.security.WindowsCredentialManager.clearCredentials();
+
         // This sends WORK_ENDED. AgentApplication stops the complete
         // monitoring session only after the server confirms success.
         sendWorkEndedAndStopSession();
@@ -7187,6 +6716,7 @@ public class EmployeeWorkspaceWindow extends JFrame {
                                     + " Agent session will remain active."
                                     + " Event will NOT be queued."
                     );
+                    logoutInProgress = false;
                     return;
                 }
 
@@ -7198,18 +6728,11 @@ public class EmployeeWorkspaceWindow extends JFrame {
 
                 AgentApplication.queueAttendanceEvent(event);
 
-                if (AgentApplication.isOfflineMode()) {
-                    System.out.println(
-                            "Offline mode: WORK_ENDED queued. "
-                                    + "Stopping agent session."
-                    );
-                    AgentApplication.stopAgentSession();
-                } else {
-                    System.out.println(
-                            "WORK_ENDED queued for retry. "
-                                    + "Agent session will remain active."
-                    );
-                }
+                System.out.println(
+                        "WORK_ENDED queued. "
+                                + "Stopping agent session."
+                );
+                AgentApplication.stopAgentSession();
 
             } catch (Exception ex) {
 
@@ -7226,13 +6749,11 @@ public class EmployeeWorkspaceWindow extends JFrame {
                     AgentApplication.queueAttendanceEvent(event);
                 }
 
-                if (AgentApplication.isOfflineMode()) {
-                    System.out.println(
-                            "Offline mode: WORK_ENDED queued. "
-                                    + "Stopping agent session."
-                    );
-                    AgentApplication.stopAgentSession();
-                }
+                System.out.println(
+                        "WORK_ENDED queued. "
+                                + "Stopping agent session."
+                );
+                AgentApplication.stopAgentSession();
             }
         });
 
@@ -7254,7 +6775,7 @@ public class EmployeeWorkspaceWindow extends JFrame {
     ) {
 
         if (millis <= 0L) {
-            return "—";
+            return "Ã¢â‚¬â€";
         }
 
 
@@ -7484,6 +7005,7 @@ public class EmployeeWorkspaceWindow extends JFrame {
                             .uri(
                                     URI.create(url)
                             )
+                            .header("Authorization", "Bearer " + org.example.config.AgentTokenHolder.getToken())
                             .header(
                                     "Accept",
                                     "application/json"
@@ -7610,6 +7132,7 @@ public class EmployeeWorkspaceWindow extends JFrame {
                             .uri(
                                     URI.create(url)
                             )
+                            .header("Authorization", "Bearer " + org.example.config.AgentTokenHolder.getToken())
                             .header(
                                     "Accept",
                                     "application/json"
@@ -7820,6 +7343,7 @@ public class EmployeeWorkspaceWindow extends JFrame {
                     HttpRequest request =
                             HttpRequest.newBuilder()
                                     .uri(URI.create(url))
+                            .header("Authorization", "Bearer " + org.example.config.AgentTokenHolder.getToken())
                                     .header("Accept", "application/json")
                                     .GET()
                                     .build();

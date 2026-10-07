@@ -32,6 +32,7 @@ public class ApplicationActivitySender {
             HttpRequest request =
                     HttpRequest.newBuilder()
                             .uri(URI.create(url))
+                            .header("Authorization", "Bearer " + org.example.config.AgentTokenHolder.getToken())
                             .header(
                                     "Content-Type",
                                     "application/json"

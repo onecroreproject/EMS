@@ -78,10 +78,18 @@ public class AgentLoginService {
                 String email =
                         extractValue(responseBody, "email");
 
+                String token =
+                        extractValue(responseBody, "token");
+
+                String refreshToken =
+                        extractValue(responseBody, "refreshToken");
+
                 System.out.println("Employee ID: " + employeeId);
                 System.out.println("Employee Code: " + employeeCode);
                 System.out.println("Employee Name: " + employeeName);
                 System.out.println("Email: " + email);
+                System.out.println("Has Token: " + (token != null && !token.isBlank()));
+                System.out.println("Has Refresh Token: " + (refreshToken != null && !refreshToken.isBlank()));
 
                 return new LoginResult(
                         true,
@@ -89,6 +97,8 @@ public class AgentLoginService {
                         employeeCode,
                         employeeName,
                         email,
+                        token,
+                        refreshToken,
                         LoginStatus.ONLINE_SUCCESS
                 );
             }
@@ -116,6 +126,8 @@ public class AgentLoginService {
                         null,
                         null,
                         null,
+                        null,
+                        null,
                         LoginStatus.INVALID_CREDENTIALS
                 );
             }
@@ -133,6 +145,8 @@ public class AgentLoginService {
 
             return new LoginResult(
                     false,
+                    null,
+                    null,
                     null,
                     null,
                     null,
@@ -179,6 +193,8 @@ public class AgentLoginService {
                 null,
                 null,
                 null,
+                null,
+                null,
                 LoginStatus.SERVER_UNAVAILABLE
         );
     }
@@ -186,29 +202,17 @@ public class AgentLoginService {
     private String extractValue(
             String json,
             String key) {
-
-        String searchKey = "\"" + key + "\":\"";
-
-        int startIndex =
-                json.indexOf(searchKey);
-
-        if (startIndex == -1) {
-            return null;
+        
+        try {
+            java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("\"" + key + "\"\\s*:\\s*\"([^\"]+)\"");
+            java.util.regex.Matcher matcher = pattern.matcher(json);
+            if (matcher.find()) {
+                return matcher.group(1);
+            }
+        } catch (Exception e) {
+            // ignore
         }
-
-        startIndex += searchKey.length();
-
-        int endIndex =
-                json.indexOf("\"", startIndex);
-
-        if (endIndex == -1) {
-            return null;
-        }
-
-        return json.substring(
-                startIndex,
-                endIndex
-        );
+        return null;
     }
 
     /*
@@ -248,6 +252,10 @@ public class AgentLoginService {
 
         private final String email;
 
+        private final String token;
+
+        private final String refreshToken;
+
         private final LoginStatus status;
 
         public LoginResult(
@@ -256,6 +264,8 @@ public class AgentLoginService {
                 String employeeCode,
                 String employeeName,
                 String email,
+                String token,
+                String refreshToken,
                 LoginStatus status) {
 
             this.success = success;
@@ -263,13 +273,16 @@ public class AgentLoginService {
             this.employeeCode = employeeCode;
             this.employeeName = employeeName;
             this.email = email;
+            this.token = token;
+            this.refreshToken = refreshToken;
             this.status = status;
         }
 
         public static LoginResult offlineSuccess(
                 String employeeId,
                 String employeeCode,
-                String username) {
+                String username,
+                String refreshToken) {
 
             return new LoginResult(
                     true,
@@ -277,6 +290,8 @@ public class AgentLoginService {
                     employeeCode,
                     null,
                     username,
+                    null,
+                    refreshToken,
                     LoginStatus.OFFLINE_SUCCESS
             );
         }
@@ -299,6 +314,14 @@ public class AgentLoginService {
 
         public String getEmail() {
             return email;
+        }
+
+        public String getToken() {
+            return token;
+        }
+
+        public String getRefreshToken() {
+            return refreshToken;
         }
 
         public LoginStatus getStatus() {

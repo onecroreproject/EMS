@@ -51,7 +51,7 @@ public class OtaUpdateService {
                 );
 
         System.out.println(
-                "OTA: Downloading update..."
+                "OTA: DOWNLOADING"
         );
 
         HttpRequest request =
@@ -61,6 +61,7 @@ public class OtaUpdateService {
                                         metadata.getDownloadUrl()
                                 )
                         )
+                        .header("Authorization", "Bearer " + org.example.config.AgentTokenHolder.getToken())
                         .timeout(
                                 Duration.ofMinutes(10)
                         )
@@ -121,7 +122,7 @@ public class OtaUpdateService {
         }
 
         System.out.println(
-                "OTA: Download completed."
+                "OTA: DOWNLOADED"
         );
 
         String actualSha256 =
@@ -156,7 +157,7 @@ public class OtaUpdateService {
         );
 
         System.out.println(
-                "OTA: SHA-256 verification successful."
+                "OTA: VERIFYING"
         );
 
         System.out.println(

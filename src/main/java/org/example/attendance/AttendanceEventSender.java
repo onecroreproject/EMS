@@ -21,6 +21,11 @@ public class AttendanceEventSender {
     ) {
 
         try {
+            if (org.example.config.AgentTokenHolder.getToken() == null || org.example.config.AgentTokenHolder.getToken().isBlank()) {
+                if (org.example.config.AgentTokenHolder.getRefreshToken() != null && !org.example.config.AgentTokenHolder.getRefreshToken().isBlank()) {
+                    org.example.config.TokenRefreshService.refreshToken(serverUrl);
+                }
+            }
 
             String url =
                     serverUrl
@@ -39,6 +44,8 @@ public class AttendanceEventSender {
             HttpRequest request =
                     HttpRequest.newBuilder()
                             .uri(URI.create(url))
+                            .header("Authorization", "Bearer " + org.example.config.AgentTokenHolder.getToken())
+                            .timeout(java.time.Duration.ofSeconds(10))
                             .POST(
                                     HttpRequest.BodyPublishers.noBody()
                             )
@@ -52,6 +59,22 @@ public class AttendanceEventSender {
 
             int statusCode =
                     response.statusCode();
+
+            if (statusCode == 302 || statusCode == 401 || statusCode == 403 || statusCode == 500) {
+                if (org.example.config.AgentTokenHolder.getRefreshToken() != null && !org.example.config.AgentTokenHolder.getRefreshToken().isBlank()) {
+                    boolean refreshed = org.example.config.TokenRefreshService.refreshToken(serverUrl);
+                    if (refreshed) {
+                        HttpRequest retryRequest = HttpRequest.newBuilder()
+                                .uri(URI.create(url))
+                                .header("Authorization", "Bearer " + org.example.config.AgentTokenHolder.getToken())
+                                .timeout(java.time.Duration.ofSeconds(10))
+                                .POST(HttpRequest.BodyPublishers.noBody())
+                                .build();
+                        response = httpClient.send(retryRequest, HttpResponse.BodyHandlers.ofString());
+                        statusCode = response.statusCode();
+                    }
+                }
+            }
 
             System.out.println(
                     "Attendance Event Response:"

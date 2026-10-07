@@ -38,11 +38,11 @@ public class LoginPopupManager {
     // CONFIGURATION
     // =========================================================
 
-    /**
-     * Login reminder interval:
-     * 1 minute.
-     */
-    private static final int REMINDER_INTERVAL_MS = 60_000;
+    private int reminderIntervalMs = 60_000;
+
+    public void setReminderIntervalMs(int ms) {
+        this.reminderIntervalMs = ms;
+    }
 
     /**
      * Small guard period used while bringing the window
@@ -292,7 +292,7 @@ public class LoginPopupManager {
 
         reminderTimer =
                 new Timer(
-                        REMINDER_INTERVAL_MS,
+                        reminderIntervalMs,
                         e -> {
 
                             if (!running) {
