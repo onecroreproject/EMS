@@ -23,6 +23,11 @@ public class ApplicationActivitySender {
     ) {
 
         try {
+            if (org.example.config.AgentTokenHolder.getToken() == null || org.example.config.AgentTokenHolder.getToken().isBlank()) {
+                if (org.example.config.AgentTokenHolder.getRefreshToken() != null && !org.example.config.AgentTokenHolder.getRefreshToken().isBlank()) {
+                    org.example.config.TokenRefreshService.refreshToken(serverUrl);
+                }
+            }
 
             String json = buildJson(activity);
 
@@ -43,12 +48,22 @@ public class ApplicationActivitySender {
                             )
                             .build();
 
-            HttpResponse<String> response =
-                    httpClient.send(
-                            request,
-                            HttpResponse.BodyHandlers
-                                    .ofString()
-                    );
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            
+            if (response.statusCode() == 302 || response.statusCode() == 401 || response.statusCode() == 403 || response.statusCode() == 500) {
+                if (org.example.config.AgentTokenHolder.getRefreshToken() != null && !org.example.config.AgentTokenHolder.getRefreshToken().isBlank()) {
+                    boolean refreshed = org.example.config.TokenRefreshService.refreshToken(serverUrl);
+                    if (refreshed) {
+                        HttpRequest retryRequest = HttpRequest.newBuilder()
+                                .uri(URI.create(url))
+                                .header("Authorization", "Bearer " + org.example.config.AgentTokenHolder.getToken())
+                                .header("Content-Type", "application/json")
+                                .POST(HttpRequest.BodyPublishers.ofString(json))
+                                .build();
+                        response = httpClient.send(retryRequest, HttpResponse.BodyHandlers.ofString());
+                    }
+                }
+            }
 
             System.out.println(
                     "Application Activity Response:"

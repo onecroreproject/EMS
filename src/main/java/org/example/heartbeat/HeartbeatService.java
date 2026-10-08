@@ -54,8 +54,13 @@ public class HeartbeatService {
                                 .POST(HttpRequest.BodyPublishers.noBody())
                                 .build();
                         response = httpClient.send(retryRequest, HttpResponse.BodyHandlers.ofString());
+                        
+                        if (response.statusCode() == 200 || response.statusCode() == 201 || response.statusCode() == 204) {
+                            return response.body();
+                        }
                     }
                 }
+                return null;
             }
 
             return response.body();

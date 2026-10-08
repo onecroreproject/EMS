@@ -2710,10 +2710,9 @@ public class EmployeeWorkspaceWindow extends JFrame {
 
 
                         g2.setColor(
-                                getModel()
-                                        .isRollover()
-                                        ? DANGER_RED_HOVER
-                                        : DANGER_RED
+                                workRunning
+                                        ? (getModel().isRollover() ? DANGER_RED_HOVER : DANGER_RED)
+                                        : (getModel().isRollover() ? PRIMARY_BLUE.darker() : PRIMARY_BLUE)
                         );
 
 
@@ -5170,7 +5169,7 @@ public class EmployeeWorkspaceWindow extends JFrame {
                 workTimerButton.setIcon(
                         createWorkspaceIcon(
                                 IconType.START,
-                                PRIMARY_BLUE
+                                Color.WHITE
                         )
                 );
             }
@@ -5182,7 +5181,7 @@ public class EmployeeWorkspaceWindow extends JFrame {
                 workTimerButton.setIcon(
                         createWorkspaceIcon(
                                 IconType.START,
-                                PRIMARY_BLUE
+                                Color.WHITE
                         )
                 );
             }
@@ -5198,9 +5197,7 @@ public class EmployeeWorkspaceWindow extends JFrame {
                                 workRunning
                                         ? IconType.STOP
                                         : IconType.START,
-                                workRunning
-                                        ? DANGER_RED
-                                        : PRIMARY_BLUE
+                                Color.WHITE
                         )
                 );
             }
@@ -5306,6 +5303,22 @@ public class EmployeeWorkspaceWindow extends JFrame {
         // -----------------------------------------------------
         // START BREAK
         // -----------------------------------------------------
+
+        if (!AgentApplication.isOfflineMode()) {
+            if (workRunning) {
+                stopTaskWork();
+                if (workRunning) {
+                    return;
+                }
+            } else {
+                closeEmployeeWorkSegment();
+            }
+        } else {
+            closeEmployeeWorkSegment();
+            workRunning = false;
+            workSegmentStartNanos = 0L;
+            AgentApplication.setTaskWorkRunning(false);
+        }
 
         breakRunning = true;
 
@@ -6663,9 +6676,9 @@ public class EmployeeWorkspaceWindow extends JFrame {
         }
 
         System.out.println(
-                "Clearing remembered credentials on explicit logout."
+                "Leaving remembered credentials intact on logout."
         );
-        org.example.security.WindowsCredentialManager.clearCredentials();
+        // org.example.security.WindowsCredentialManager.clearCredentials();
 
         // This sends WORK_ENDED. AgentApplication stops the complete
         // monitoring session only after the server confirms success.
@@ -7848,10 +7861,15 @@ public class EmployeeWorkspaceWindow extends JFrame {
                 ) / 60;
 
 
+        long seconds =
+                totalSeconds % 60;
+
+
         return String.format(
-                "%dh %02dm",
+                "%dh %02dm %02ds",
                 hours,
-                minutes
+                minutes,
+                seconds
         );
     }
 
@@ -7868,9 +7886,14 @@ public class EmployeeWorkspaceWindow extends JFrame {
                 totalSeconds / 60;
 
 
+        long seconds =
+                totalSeconds % 60;
+
+
         return String.format(
-                "%dm",
-                minutes
+                "%dm %02ds",
+                minutes,
+                seconds
         );
     }
 

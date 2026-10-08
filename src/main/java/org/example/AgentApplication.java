@@ -538,31 +538,23 @@ public class AgentApplication {
 
 
                                 /*
+                                 * Hide Login Window Immediately for a smooth transition
+                                 */
+                                loginWindowHolder[0].dispose();
+
+                                /*
                                  * =========================
                                  * Employee Workspace
                                  * =========================
                                  */
+                                long workStartedAtMillis = System.currentTimeMillis();
 
-                                long workStartedAtMillis =
-                                        System.currentTimeMillis();
-
-
-                                EmployeeWorkspaceWindow
-                                        workspaceWindow =
+                                EmployeeWorkspaceWindow workspaceWindow =
                                         new EmployeeWorkspaceWindow(
                                                 loginResult,
                                                 deviceId,
                                                 workStartedAtMillis
                                         );
-
-
-                                /*
-                                 * Hide Login Window
-                                 */
-
-                                loginWindowHolder[0]
-                                        .setVisible(false);
-
 
                                 /*
                                  * Show Workspace
